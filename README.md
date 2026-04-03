@@ -8,6 +8,14 @@ A **Swiss Army Knife** for Web Application Firewall bypass — built with React 
 ![React](https://img.shields.io/badge/React-18-blue)
 ![Vite](https://img.shields.io/badge/Vite-5-purple)
 
+### 🔗 [Live Tool → waf-bypass.dev](https://waf-bypass.dev)
+
+---
+
+## 📸 Screenshot
+
+![WAF Bypass Toolkit Screenshot](sreenshot.png)
+
 ---
 
 ## 🎯 Features
@@ -108,8 +116,8 @@ A **Swiss Army Knife** for Web Application Firewall bypass — built with React 
 
 ```bash
 # Clone the repository
-git clone https://github.com/Ilias1988/WAF-Bypass-Toolkit.git
-cd WAF-Bypass-Toolkit
+git clone https://github.com/Ilias1988/waf-bypass.git
+cd waf-bypass
 
 # Install dependencies
 npm install
