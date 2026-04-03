@@ -1,0 +1,101 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Base Styles ─────────────────────────────── */
+body {
+  @apply bg-dark-950 text-gray-200 font-sans antialiased;
+  overflow-x: hidden;
+}
+
+/* ── Scrollbar ───────────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  @apply bg-dark-900;
+}
+::-webkit-scrollbar-thumb {
+  @apply bg-dark-600 rounded-full;
+}
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-dark-500;
+}
+
+/* ── Terminal Style ──────────────────────────── */
+.terminal-glow {
+  box-shadow: 0 0 15px rgba(239, 68, 68, 0.05), 0 0 30px rgba(0, 0, 0, 0.3);
+}
+
+.terminal-header {
+  background: linear-gradient(180deg, rgba(22, 27, 34, 0.9) 0%, rgba(13, 17, 23, 0.95) 100%);
+}
+
+.terminal-dot {
+  @apply w-2.5 h-2.5 rounded-full;
+}
+
+/* ── Layer Toggle Switch ─────────────────────── */
+.layer-switch {
+  @apply relative inline-flex h-5 w-9 rounded-full transition-colors duration-200 ease-in-out cursor-pointer;
+}
+.layer-switch-knob {
+  @apply inline-block h-4 w-4 rounded-full bg-white shadow transform transition-transform duration-200 ease-in-out mt-0.5;
+}
+
+/* ── Category Button Glow ────────────────────── */
+.category-active {
+  box-shadow: inset 0 0 20px rgba(239, 68, 68, 0.1);
+}
+
+/* ── Variant Card ────────────────────────────── */
+.variant-card {
+  @apply bg-dark-900 border border-dark-700/40 rounded-lg overflow-hidden transition-all duration-200;
+}
+.variant-card:hover {
+  @apply border-dark-600/60;
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.05);
+}
+
+/* ── Code Block ──────────────────────────────── */
+.code-block {
+  @apply font-mono text-sm leading-relaxed p-3 bg-dark-950 text-waf-green overflow-x-auto whitespace-pre-wrap break-all;
+}
+
+/* ── Toast Animation ─────────────────────────── */
+.toast-enter {
+  animation: toastSlideIn 0.3s ease-out;
+}
+.toast-exit {
+  animation: toastSlideOut 0.3s ease-in forwards;
+}
+
+@keyframes toastSlideIn {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+@keyframes toastSlideOut {
+  from { transform: translateY(0); opacity: 1; }
+  to { transform: translateY(20px); opacity: 0; }
+}
+
+/* ── Sidebar Highlight ───────────────────────── */
+.sidebar-item-active {
+  background: linear-gradient(90deg, rgba(239, 68, 68, 0.08) 0%, transparent 100%);
+  border-left: 2px solid #ef4444;
+}
+
+/* ── Badge Pulse ─────────────────────────────── */
+.badge-pulse {
+  animation: badgePulse 2s ease-in-out infinite;
+}
+@keyframes badgePulse {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 1; }
+}
+
+/* ── Selection ───────────────────────────────── */
+::selection {
+  @apply bg-waf-red/30 text-white;
+}

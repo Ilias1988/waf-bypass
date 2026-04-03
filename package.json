@@ -1,0 +1,36 @@
+{
+  "name": "waf-bypass-toolkit",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Swiss Army Knife for WAF bypass — generate obfuscated web payloads for pentesting & bug bounty",
+  "homepage": "https://waf-bypass.dev",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Ilias1988/waf-bypass.git"
+  },
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "build:prod": "node scripts/build.mjs",
+    "preview": "vite preview",
+    "predeploy": "npm run build",
+    "deploy": "node scripts/deploy-ghpages.mjs"
+  },
+  "dependencies": {
+    "lucide-react": "^0.312.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-helmet-async": "^3.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.48",
+    "@types/react-dom": "^18.2.18",
+    "@vitejs/plugin-react": "^4.2.1",
+    "autoprefixer": "^10.4.17",
+    "gh-pages": "^6.1.1",
+    "postcss": "^8.4.33",
+    "tailwindcss": "^3.4.1",
+    "vite": "^5.0.12"
+  }
+}
