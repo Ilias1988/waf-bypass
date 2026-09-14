@@ -7,6 +7,7 @@ import OutputPanel from './components/panels/OutputPanel'
 import EvasionOptions from './components/panels/EvasionOptions'
 import SEOHead from './components/seo/SEOHead'
 import SEOContent from './components/seo/SEOContent'
+import ToolIntro from './components/seo/ToolIntro'
 import useWafBypass from './hooks/useWafBypass'
 import { Zap, Menu, X } from 'lucide-react'
 
@@ -38,6 +39,7 @@ export default function App() {
 
       {/* Main Content */}
       <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 py-5">
+        <ToolIntro />
         <div className="flex gap-4 relative">
 
           {/* Mobile Sidebar Toggle */}
@@ -78,6 +80,7 @@ export default function App() {
               <div className="bg-dark-850 border border-dark-700/30 rounded-lg p-3">
                 <EvasionOptions
                   category={category}
+                  target={target}
                   activeLayers={activeLayers}
                   onToggleLayer={toggleLayer}
                   onGenerate={() => { generate(); setSidebarOpen(false) }}

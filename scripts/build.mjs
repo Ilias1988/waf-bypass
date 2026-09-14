@@ -7,7 +7,7 @@ const root = resolve(__dirname, '..')
 // Change CWD so Tailwind & PostCSS resolve configs correctly
 process.chdir(root)
 
-const { build } = await import('../node_modules/vite/dist/node/index.js')
+const { build } = await import('vite')
 
 await build({
   root,

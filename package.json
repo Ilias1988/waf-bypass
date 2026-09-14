@@ -1,8 +1,8 @@
 {
   "name": "waf-bypass-toolkit",
   "private": true,
-  "version": "1.0.0",
-  "description": "Swiss Army Knife for WAF bypass — generate obfuscated web payloads for pentesting & bug bounty",
+  "version": "1.1.0",
+  "description": "Target-aware payload transformation toolkit for authorized web security testing",
   "homepage": "https://waf-bypass.dev",
   "repository": {
     "type": "git",
@@ -11,11 +11,18 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "test": "node --test",
+    "test:adversarial": "node --test test/adversarial-regression.test.js",
+    "check": "npm test && npm run build",
+    "check:release": "npm run check && node --check scripts/build.mjs && node --check scripts/deploy-ghpages.mjs",
     "build": "vite build",
     "build:prod": "node scripts/build.mjs",
     "preview": "vite preview",
     "predeploy": "npm run build",
     "deploy": "node scripts/deploy-ghpages.mjs"
+  },
+  "engines": {
+    "node": ">=20"
   },
   "dependencies": {
     "lucide-react": "^0.312.0",

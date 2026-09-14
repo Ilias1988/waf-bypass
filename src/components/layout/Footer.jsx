@@ -49,8 +49,9 @@ export default function Footer() {
 
         {/* Bottom info */}
         <div className="mt-4 pt-4 border-t border-dark-700/20 flex flex-col sm:flex-row items-center justify-between gap-2">
-          <p className="text-[10px] text-dark-600">
-            100% Client-Side — No data leaves your browser
+          <p className="text-[10px] text-dark-600 max-w-md text-center sm:text-left leading-relaxed">
+            Payloads are transformed locally in your browser and are not submitted by the toolkit.
+            Cloudflare Web Analytics receives page-view and performance metrics.
           </p>
           <p className="text-[10px] text-dark-600 max-w-xl text-center sm:text-right leading-relaxed">
             ⚠️ Intended for authorized penetration testing, bug bounty programs, and security research only.

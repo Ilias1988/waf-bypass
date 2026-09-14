@@ -1,12 +1,12 @@
 import { useState, useCallback } from 'react'
-import { generateSqliVariants } from '../engines/sqli'
-import { generateXssVariants } from '../engines/xss'
-import { generateCmdiVariants } from '../engines/cmdi'
-import { generateLfiVariants } from '../engines/lfi'
-import { generateSsrfVariants } from '../engines/ssrf'
-import { generateSstiVariants } from '../engines/ssti'
-import { generateXxeVariants } from '../engines/xxe'
-import { TARGETS } from '../data/techniques'
+import { generateSqliVariants } from '../engines/sqli.js'
+import { generateXssVariants } from '../engines/xss.js'
+import { generateCmdiVariants } from '../engines/cmdi.js'
+import { generateLfiVariants } from '../engines/lfi.js'
+import { generateSsrfVariants } from '../engines/ssrf.js'
+import { generateSstiVariants } from '../engines/ssti.js'
+import { generateXxeVariants } from '../engines/xxe.js'
+import { EVASION_LAYERS, TARGETS } from '../data/techniques.js'
 
 const ENGINE_MAP = {
   sqli: generateSqliVariants,
@@ -44,6 +44,24 @@ export default function useWafBypass() {
     setActiveLayers((prev) =>
       prev.includes(layerId) ? prev.filter((l) => l !== layerId) : [...prev, layerId]
     )
+    setVariants([])
+    setError(null)
+  }, [])
+
+  const changeTarget = useCallback((newTarget) => {
+    setTarget(newTarget)
+    setActiveLayers((previous) => previous.filter((layerId) => {
+      const layer = EVASION_LAYERS[category]?.find((candidate) => candidate.id === layerId)
+      return !layer?.targets || layer.targets.includes(newTarget)
+    }))
+    setVariants([])
+    setError(null)
+  }, [category])
+
+  const changePayload = useCallback((newPayload) => {
+    setInputPayload(newPayload)
+    setVariants([])
+    setError(null)
   }, [])
 
   const generate = useCallback(() => {
@@ -60,9 +78,14 @@ export default function useWafBypass() {
     }
 
     try {
-      const results = engine(inputPayload.trim(), activeLayers, target)
-      setVariants(results)
-      setError(null)
+      const results = engine(inputPayload, activeLayers, target)
+      if (results.length <= 1) {
+        setVariants([])
+        setError('The selected layers are not applicable to this payload and target')
+      } else {
+        setVariants(results)
+        setError(null)
+      }
     } catch (err) {
       setVariants([])
       setError(`Engine error: ${err.message}`)
@@ -79,9 +102,9 @@ export default function useWafBypass() {
     category,
     setCategory: changeCategory,
     target,
-    setTarget,
+    setTarget: changeTarget,
     inputPayload,
-    setInputPayload,
+    setInputPayload: changePayload,
     activeLayers,
     toggleLayer,
     variants,

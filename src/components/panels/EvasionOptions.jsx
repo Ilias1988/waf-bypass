@@ -1,7 +1,7 @@
 import { Layers, Zap } from 'lucide-react'
 import { EVASION_LAYERS } from '../../data/techniques'
 
-export default function EvasionOptions({ category, activeLayers, onToggleLayer, onGenerate, hasInput }) {
+export default function EvasionOptions({ category, target, activeLayers, onToggleLayer, onGenerate, hasInput }) {
   const layers = EVASION_LAYERS[category] || []
 
   return (
@@ -25,13 +25,18 @@ export default function EvasionOptions({ category, activeLayers, onToggleLayer, 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-1.5">
         {layers.map((layer) => {
           const isActive = activeLayers.includes(layer.id)
+          const isSupported = !layer.targets || layer.targets.includes(target)
 
           return (
             <button
               key={layer.id}
               onClick={() => onToggleLayer(layer.id)}
+              disabled={!isSupported}
+              title={isSupported ? layer.description : `Not applicable to ${target}`}
               className={`group flex items-start gap-2.5 p-2.5 rounded-lg border text-left transition-all duration-200 ${
-                isActive
+                !isSupported
+                  ? 'border-dark-800 bg-dark-900/30 opacity-40 cursor-not-allowed'
+                  : isActive
                   ? 'border-waf-red/30 bg-waf-red/5 hover:bg-waf-red/10'
                   : 'border-dark-700/30 bg-dark-800/30 hover:border-dark-600/50 hover:bg-dark-800/50'
               }`}
@@ -58,7 +63,7 @@ export default function EvasionOptions({ category, activeLayers, onToggleLayer, 
                   </span>
                 </div>
                 <p className="text-[10px] text-dark-500 leading-tight mt-0.5 line-clamp-2">
-                  {layer.description}
+                  {isSupported ? layer.description : `Unavailable for ${target}`}
                 </p>
               </div>
             </button>

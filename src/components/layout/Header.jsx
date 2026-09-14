@@ -15,7 +15,7 @@ export default function Header() {
               WAF Bypass Toolkit
             </h1>
             <p className="text-[10px] text-dark-400 font-medium tracking-wider uppercase hidden sm:block">
-              Web Payload Obfuscator — Pentesting & Bug Bounty
+            Target-aware payload transformations for authorized testing
             </p>
           </div>
         </div>
@@ -24,7 +24,7 @@ export default function Header() {
         <div className="flex items-center gap-2">
           <span className="hidden sm:inline-flex items-center gap-1 px-2 py-1 bg-waf-red/10 border border-waf-red/20 rounded text-[10px] text-waf-red font-semibold uppercase tracking-wider badge-pulse">
             <Bug size={10} />
-            v1.0
+            v1.1
           </span>
           <a
             href="https://github.com/Ilias1988/waf-bypass"

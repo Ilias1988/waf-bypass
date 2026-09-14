@@ -8,19 +8,21 @@ export default function CopyButton({ text, size = 'sm', className = '' }) {
     if (!text) return
     try {
       await navigator.clipboard.writeText(text)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
     } catch {
       // Fallback for older browsers
       const ta = document.createElement('textarea')
       ta.value = text
+      ta.setAttribute('readonly', '')
+      ta.style.position = 'fixed'
+      ta.style.opacity = '0'
       document.body.appendChild(ta)
       ta.select()
-      document.execCommand('copy')
-      document.body.removeChild(ta)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
+      const success = document.execCommand('copy')
+      ta.remove()
+      if (!success) return
     }
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
   }
 
   const sizeClasses = {
@@ -30,6 +32,7 @@ export default function CopyButton({ text, size = 'sm', className = '' }) {
 
   return (
     <button
+      type="button"
       onClick={handleCopy}
       className={`inline-flex items-center gap-1 ${sizeClasses[size]} rounded transition-all duration-200 ${
         copied

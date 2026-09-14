@@ -1,4 +1,4 @@
-import { BookOpen, Shield, Zap, Eye, Globe, Scale, ChevronRight } from 'lucide-react'
+import { BookOpen, Shield, Zap, Eye, Globe, Scale, ChevronRight, HelpCircle } from 'lucide-react'
 
 export default function SEOContent() {
   return (
@@ -45,9 +45,9 @@ export default function SEOContent() {
             the WAF blocks it — returning a 403 Forbidden response or a challenge page.
           </p>
           <p className="text-dark-300 leading-relaxed pl-7">
-            While WAFs provide a critical layer of defense, they are not infallible. WAF rules rely on
-            <strong className="text-gray-200"> pattern matching</strong> and <strong className="text-gray-200">regular expressions</strong>,
-            which means they can be bypassed when payloads are obfuscated in ways the rules don't anticipate.
+            While WAFs provide a critical layer of defense, their decisions depend on rules, normalization,
+            signatures, and—depending on the product—behavioral or machine-learning signals. Differences between
+            how a WAF, web framework, and backend parser decode the same request are important test cases.
             This is why <strong className="text-gray-200">penetration testers</strong> and <strong className="text-gray-200">bug bounty hunters</strong> need
             to understand WAF evasion techniques — not to exploit applications maliciously, but to test
             whether WAF configurations are robust enough to withstand sophisticated attacks.
@@ -69,15 +69,17 @@ export default function SEOContent() {
             <code className="text-waf-green font-mono text-sm bg-dark-800/80 px-1.5 py-0.5 rounded">OR 1=1</code>, and{' '}
             <code className="text-waf-green font-mono text-sm bg-dark-800/80 px-1.5 py-0.5 rounded">DROP TABLE</code>.
             Bypass techniques exploit the gap between how the WAF parses SQL and how the database engine interprets it.
-            <strong className="text-gray-200"> Whitespace substitution</strong> replaces spaces with{' '}
+            <strong className="text-gray-200"> Whitespace substitution</strong> can replace spaces with{' '}
             <code className="text-waf-green font-mono text-sm bg-dark-800/80 px-1.5 py-0.5 rounded">/**/</code> comments
             or URL-encoded characters. <strong className="text-gray-200">Case toggling</strong> like{' '}
             <code className="text-waf-green font-mono text-sm bg-dark-800/80 px-1.5 py-0.5 rounded">uNiOn SeLeCt</code>{' '}
-            defeats case-sensitive regex rules. <strong className="text-gray-200">MySQL versioned comments</strong> such as{' '}
+            probes case-sensitive rules. <strong className="text-gray-200">MySQL versioned comments</strong> such as{' '}
             <code className="text-waf-green font-mono text-sm bg-dark-800/80 px-1.5 py-0.5 rounded">/*!50000SELECT*/</code>{' '}
-            are ignored by WAFs but executed by MySQL. These techniques, combined with{' '}
+            have MySQL-specific behavior. Techniques such as{' '}
             <strong className="text-gray-200">hex encoding</strong> and{' '}
-            <strong className="text-gray-200">double URL encoding</strong>, make SQL payloads nearly invisible to pattern matching.
+            <strong className="text-gray-200">double URL encoding</strong> are useful only when the selected database and
+            request decoding chain interpret them as expected. The toolkit preserves quoted literals and applies SQL
+            transformations outside protected strings, identifiers, and comments whenever the technique requires it.
           </p>
         </article>
 
@@ -106,10 +108,11 @@ export default function SEOContent() {
             <code className="text-waf-green font-mono text-sm bg-dark-800/80 px-1.5 py-0.5 rounded">$&#123;IFS&#125;</code>{' '}
             or using brace expansion{' '}
             <code className="text-waf-green font-mono text-sm bg-dark-800/80 px-1.5 py-0.5 rounded">&#123;cat,/etc/passwd&#125;</code>{' '}
-            avoids space-based detection. Keyword bypass techniques like{' '}
-            <code className="text-waf-green font-mono text-sm bg-dark-800/80 px-1.5 py-0.5 rounded">c''a''t</code> or{' '}
-            <code className="text-waf-green font-mono text-sm bg-dark-800/80 px-1.5 py-0.5 rounded">c$@at</code>{' '}
-            break the string signature while remaining valid shell syntax.
+            creates an alternate separator for compatible shells. Keyword variants use syntax appropriate to the
+            selected runtime: quotes or backslashes for compatible POSIX shells, carets for{' '}
+            <code className="text-waf-green font-mono text-sm bg-dark-800/80 px-1.5 py-0.5 rounded">cmd.exe</code>,
+            and command reconstruction for PowerShell. Transport-encoded spaces and newlines are marked conditional
+            because they require a decoding pass before the shell sees them.
           </p>
         </article>
 
@@ -122,17 +125,16 @@ export default function SEOContent() {
             </h3>
           </div>
           <p className="text-dark-300 leading-relaxed pl-7">
-            <strong className="text-gray-200">Server-Side Request Forgery (SSRF)</strong> bypasses focus on IP address
+            <strong className="text-gray-200">Server-Side Request Forgery (SSRF)</strong> testing often includes IP address
             obfuscation — converting <code className="text-waf-green font-mono text-sm bg-dark-800/80 px-1.5 py-0.5 rounded">127.0.0.1</code> to
             decimal (<code className="text-waf-green font-mono text-sm bg-dark-800/80 px-1.5 py-0.5 rounded">2130706433</code>),
             hexadecimal, octal, or IPv6-mapped formats.{' '}
             <strong className="text-gray-200">Server-Side Template Injection (SSTI)</strong> evades
             keyword-based WAF rules by splitting Python dunder attributes with string concatenation or hex escapes.{' '}
-            <strong className="text-gray-200">XML External Entity (XXE)</strong> bypass techniques re-encode entire XML
-            payloads from UTF-8 to UTF-16 or UTF-7, preventing the WAF from reading keywords like{' '}
-            <code className="text-waf-green font-mono text-sm bg-dark-800/80 px-1.5 py-0.5 rounded">ENTITY</code> and{' '}
-            <code className="text-waf-green font-mono text-sm bg-dark-800/80 px-1.5 py-0.5 rounded">SYSTEM</code>{' '}
-            while the XML parser on the server processes them normally.
+            <strong className="text-gray-200"> XML External Entity (XXE)</strong> testing may require exact byte-level
+            encodings such as UTF-16 or legacy UTF-7, plus parser-specific alternatives such as XInclude. Encoding
+            declarations alone are insufficient, so UTF-16 variants are downloaded as their real bytes. Entity,
+            XInclude, SVG, and UTF-7 variants remain parser-dependent and are labeled with their prerequisites.
           </p>
         </article>
 
@@ -145,15 +147,36 @@ export default function SEOContent() {
             </h3>
           </div>
           <p className="text-dark-300 leading-relaxed pl-7">
-            Modern WAFs employ multiple detection engines simultaneously — regex matching, machine learning classifiers,
-            behavioral analysis, and reputation scoring. A single evasion technique is rarely sufficient.
-            The most effective approach is <strong className="text-gray-200">combining multiple layers</strong>: for example,
-            applying whitespace bypass + case toggling + hex encoding to a SQLi payload generates variants that
-            look fundamentally different from the original while maintaining the same exploit logic. This
-            WAF Bypass Toolkit generates <strong className="text-gray-200">5-12 unique variants</strong> per payload,
-            each using different layer combinations, giving penetration testers a diverse set of payloads
-            to test against specific WAF configurations during <strong className="text-gray-200">authorized security assessments</strong>.
+            Modern WAFs can combine normalization, signatures, anomaly scores, behavioral signals, and reputation data.
+            Combining compatible layers helps test different decoding and parsing paths, but an arbitrary combination
+            can also change meaning or break syntax. This
+            WAF Bypass Toolkit generates <strong className="text-gray-200">up to 12 unique variants</strong> per payload,
+            reserves coverage for selected layers, removes duplicates, and labels environment-dependent outputs.
+            Test each result only against an explicitly authorized target and verify it in the exact database, shell,
+            template, URL, HTML, or XML context for which it was generated.
           </p>
+        </article>
+
+        {/* Visible FAQ mirrors the structured data in SEOHead. */}
+        <article className="space-y-4" aria-labelledby="faq-title">
+          <div className="flex items-center gap-2">
+            <HelpCircle size={20} className="text-waf-green shrink-0" />
+            <h3 id="faq-title" className="text-xl font-semibold text-gray-200">Frequently Asked Questions</h3>
+          </div>
+          <div className="grid gap-3 pl-0 sm:pl-7">
+            {[
+              ['What is a Web Application Firewall (WAF)?', 'A WAF inspects HTTP traffic and applies rules or scoring to block suspicious requests before they reach an application.'],
+              ['How do WAF bypass tests work?', 'Authorized tests compare how the WAF, transport decoder, framework, and backend parser interpret alternate representations of the same input.'],
+              ['What is SQL injection WAF testing?', 'It creates database-dialect-aware SQLi variants and verifies which normalization, quoting, comment, or encoding rules apply to the selected stack.'],
+              ['Is using this toolkit legal?', 'Use it only on systems you own or where you have explicit written permission and a clearly defined testing scope.'],
+              ['Does this tool guarantee a WAF bypass?', 'No. Success depends on the WAF policy, decoding chain, application context, backend grammar, and runtime. Conditional and legacy labels identify prerequisites.'],
+            ].map(([question, answer]) => (
+              <div key={question} className="rounded-lg border border-dark-700/40 bg-dark-850/50 p-4">
+                <h4 className="font-semibold text-gray-200">{question}</h4>
+                <p className="mt-1 text-sm leading-relaxed text-dark-300">{answer}</p>
+              </div>
+            ))}
+          </div>
         </article>
 
         {/* Ethics Box */}

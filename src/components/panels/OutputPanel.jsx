@@ -1,8 +1,10 @@
 import { Code, Shield, AlertTriangle, Hash } from 'lucide-react'
 import CopyButton from '../ui/CopyButton'
+import DownloadButton from '../ui/DownloadButton'
 
 export default function OutputPanel({ variants, error }) {
   const hasVariants = variants.length > 1 // >1 because first is always "Original"
+  const textVariants = variants.filter((variant) => variant.label !== 'Original' && !variant.bytesBase64)
 
   return (
     <div className="flex flex-col h-full">
@@ -28,10 +30,9 @@ export default function OutputPanel({ variants, error }) {
         </div>
 
         {/* Copy All Button */}
-        {hasVariants && (
+        {textVariants.length > 0 && (
           <CopyButton
-            text={variants
-              .filter((v) => v.label !== 'Original')
+            text={textVariants
               .map((v, i) => `# Variant ${i + 1} [${v.label}]\n${v.payload}`)
               .join('\n\n')}
             size="sm"
@@ -64,6 +65,17 @@ export default function OutputPanel({ variants, error }) {
                       <span className="text-[10px] font-medium text-waf-amber">
                         {variant.label}
                       </span>
+                      {variant.validity && (
+                        <span className={`text-[9px] px-1.5 py-0.5 rounded uppercase tracking-wide ${
+                          variant.validity === 'validated'
+                            ? 'bg-waf-green/10 text-waf-green'
+                            : variant.validity === 'legacy'
+                              ? 'bg-waf-orange/10 text-waf-orange'
+                              : 'bg-waf-cyan/10 text-waf-cyan'
+                        }`}>
+                          {variant.validity}
+                        </span>
+                      )}
                       {/* Layer badges */}
                       <div className="flex gap-1">
                         {variant.layers.map((layer) => (
@@ -76,13 +88,26 @@ export default function OutputPanel({ variants, error }) {
                         ))}
                       </div>
                     </div>
-                    <CopyButton text={variant.payload} size="sm" />
+                    {variant.bytesBase64 ? (
+                      <DownloadButton
+                        bytesBase64={variant.bytesBase64}
+                        filename={variant.filename}
+                        mimeType="application/xml"
+                      />
+                    ) : (
+                      <CopyButton text={variant.payload} size="sm" />
+                    )}
                   </div>
 
                   {/* Variant Code */}
                   <pre className="code-block max-h-[200px]">
                     {variant.payload}
                   </pre>
+                  {variant.note && (
+                    <p className="px-3 py-2 text-[10px] leading-relaxed text-dark-400 border-t border-dark-700/30">
+                      {variant.note}
+                    </p>
+                  )}
                 </div>
               ))}
           </div>

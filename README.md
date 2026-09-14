@@ -1,8 +1,8 @@
-# 🛡️ WAF Bypass Toolkit — Web Payload Obfuscator
+# 🛡️ WAF Bypass Toolkit — Target-Aware Payload Transformer
 
-A **Swiss Army Knife** for Web Application Firewall bypass — built with React & Vite. Designed for **Web Pentesters** and **Bug Bounty Hunters** to generate obfuscated web payloads that evade WAFs like Cloudflare, AWS WAF, and ModSecurity.
+A browser-based payload transformation toolkit built with React and Vite. It helps **web penetration testers**, **bug bounty hunters**, and **security researchers** generate context-aware variants for authorized WAF and parser testing.
 
-> ⚡ 100% Client-Side — No data leaves your browser. No backend. No API calls.
+> Payload transformation is local: the application has no backend, does not contact a target, and does not execute generated payloads. The public site uses Cloudflare Web Analytics for page-view and performance metrics; payload values are not submitted by the toolkit.
 
 ![License](https://img.shields.io/badge/license-MIT-red)
 ![React](https://img.shields.io/badge/React-18-blue)
@@ -22,11 +22,18 @@ A **Swiss Army Knife** for Web Application Firewall bypass — built with React 
 
 - **7 Vulnerability Categories** with dedicated evasion engines
 - **Multiple evasion layers** per category with toggle controls
-- **5-12 bypass variants** generated per payload
-- **Copy-paste ready** for Burp Suite / Repeater
-- **Target-specific** payloads (MySQL, Linux, PHP, Jinja2, etc.)
+- **Up to 12 bypass variants** generated per payload, fairly distributed across selected layers
+- **Context-aware output** with validated, conditional, and legacy technique labels and prerequisite notes
+- **Target-specific** payloads (MySQL, PostgreSQL, MSSQL, Linux shell, Windows cmd.exe, PowerShell, PHP, Jinja2, etc.)
+- **Exact byte downloads** for encodings such as UTF-16LE/BE XML
 - **Dark hacker theme** with responsive design
-- **Zero dependencies** on external APIs
+- **No target-side execution** — the browser generates inert text or exact downloadable bytes
+
+## What the toolkit does—and does not do
+
+The toolkit applies deterministic, target-aware transformations to user-supplied test payloads. SQL transformations protect quoted strings, comments, dollar quotes, Oracle q-quotes, and identifiers where applicable. JavaScript transformations distinguish code from strings and comments. Command variants use separate Linux, `cmd.exe`, and PowerShell rules. URL, template, path, and XML variants retain context-specific decoding or parser requirements.
+
+Generated output is test material, not a promise of universal semantic equivalence or a guaranteed bypass. Real behavior depends on the selected database, shell, framework, parser, request decoding chain, application context, WAF policy, and backend configuration. Always read each output's validity label and note.
 
 ---
 
@@ -60,12 +67,12 @@ A **Swiss Army Knife** for Web Application Firewall bypass — built with React 
 | Layer | Example |
 |-------|---------|
 | Space Bypass | `cat${IFS}/etc/passwd` |
-| Keyword Bypass | `c''a''t`, `c$@at` |
+| Keyword Bypass | Linux `c'a't`, cmd.exe `w^h^o^a^m^i`, PowerShell `&('Write-'+'Output')` |
 | Newline Injection | `%0acat /etc/passwd` |
 | Variable Expansion | `$(echo Y2F0|base64 -d)` |
 | Hex Commands | `$(printf '\x63\x61\x74')` |
 
-**Targets:** Linux, Windows
+**Targets:** Linux shell, Windows cmd.exe, PowerShell
 
 ### 4. LFI / Path Traversal
 | Layer | Example |
@@ -103,10 +110,10 @@ A **Swiss Army Knife** for Web Application Firewall bypass — built with React 
 ### 7. XML External Entity (XXE)
 | Layer | Example |
 |-------|---------|
-| UTF-16 Encoding | Re-encode XML as UTF-16 |
+| UTF-16 Encoding | Download XML with real UTF-16LE/BE bytes and BOM |
 | UTF-7 Encoding | Encode ENTITY/SYSTEM keywords |
 | Entity Nesting | Parameter entity indirection |
-| CDATA Wrapping | `<![CDATA[` payload `]]>` |
+| Alternative XML Vectors | XInclude, SVG, and target-specific stream-wrapper variants |
 
 **Targets:** Generic XML, PHP, Java
 
@@ -119,14 +126,23 @@ A **Swiss Army Knife** for Web Application Firewall bypass — built with React 
 git clone https://github.com/Ilias1988/waf-bypass.git
 cd waf-bypass
 
-# Install dependencies
-npm install
+# Install the exact locked dependencies
+npm ci
 
 # Start development server
 npm run dev
 
 # Build for production
 npm run build
+
+# Run the functional regression suite and production build
+npm run check
+
+# Run the adversarial cross-engine matrix only
+npm run test:adversarial
+
+# Run the complete release gate
+npm run check:release
 ```
 
 ---
@@ -170,7 +186,34 @@ WAF-Bypass-Toolkit/
 - **Vite 5** — Lightning-fast build tool
 - **Tailwind CSS 3** — Utility-first styling
 - **Lucide React** — Beautiful icons
-- **100% Client-Side** — Zero backend
+- **Client-side transformer** — no payload execution or target requests
+
+---
+
+## ✅ Output validity
+
+Payload transformations are context-sensitive. The UI marks each generated result as:
+
+- **Validated** — deterministic syntax/encoding checks pass for the represented transformation.
+- **Conditional** — valid only when the target performs the documented decoding, parsing, or feature step.
+- **Legacy** — depends on obsolete or non-conforming parser behavior and should be tested only against an explicitly compatible target.
+
+Binary encodings are downloaded as exact bytes instead of being copied as misleading plain text. The automated suite covers Unicode encoding, SQL dialect handling, PowerShell `EncodedCommand`, Windows/POSIX traversal, URL authority preservation, SSTI intent preservation, XML byte encoding, layer fairness, and production builds. The adversarial matrix additionally exercises every configured target/layer with complex Unicode, quoting, comments, raw URL suffixes, decoding-depth, metadata, determinism, and no-op invariants.
+
+## 📊 Privacy and analytics
+
+Payload input and generated variants remain in browser memory unless you explicitly copy or download them. The application does not send payloads to a backend or target. The hosted site loads Cloudflare Web Analytics to measure visits, page-load performance, and Core Web Vitals. Cloudflare documents Web Analytics as privacy-first and states that it does not collect or use visitors' personal data.
+
+## 🚢 Deployment
+
+The deployment helper is intentionally guarded. It uses an isolated operating-system temporary directory, executes Git without a shell, and requires an explicit confirmation flag:
+
+```bash
+npm run check:release
+npm run deploy -- --confirm-deploy
+```
+
+Review [`RELEASE_CHECKLIST.md`](RELEASE_CHECKLIST.md) before publication. The deploy command updates the fixed `gh-pages` branch for this repository; do not run it from an unreviewed working tree.
 
 ---
 

@@ -83,8 +83,9 @@ export const TARGETS = {
     { id: 'attr', name: 'Attribute Context' },
   ],
   cmdi: [
-    { id: 'linux', name: 'Linux' },
-    { id: 'windows', name: 'Windows' },
+    { id: 'linux', name: 'Linux shell' },
+    { id: 'windows', name: 'Windows cmd.exe' },
+    { id: 'powershell', name: 'PowerShell' },
   ],
   lfi: [
     { id: 'php', name: 'PHP' },
@@ -114,13 +115,13 @@ export const EVASION_LAYERS = {
       id: 'whitespace',
       name: 'Whitespace Bypass',
       icon: '⬜',
-      description: 'Replace spaces with /**/, %0a, %09, %0d, +',
+      description: 'Token-aware comments or transport-decoded whitespace; literals stay intact',
     },
     {
       id: 'case-toggle',
       name: 'Case Toggling',
       icon: '🔤',
-      description: 'Random upper/lower case per character',
+      description: 'Deterministic alternating upper/lower case',
     },
     {
       id: 'inline-comments',
@@ -153,6 +154,7 @@ export const EVASION_LAYERS = {
       name: 'HTML Entity Encoding',
       icon: '🏷️',
       description: 'Convert chars to &#xHH; or &#DDD; entities',
+      targets: ['html', 'attr'],
     },
     {
       id: 'url-encoding',
@@ -171,12 +173,14 @@ export const EVASION_LAYERS = {
       name: 'Tag & Event Variation',
       icon: '🏗️',
       description: 'Alternative tags: svg/onload, img/onerror, body/onpageshow',
+      targets: ['html', 'attr'],
     },
     {
       id: 'case-toggle',
       name: 'Case Toggling',
       icon: '🔤',
-      description: 'Random casing: <ScRiPt>, <SVG/ONLOAD=...>',
+      description: 'Deterministic casing of HTML tags and event names',
+      targets: ['html', 'attr'],
     },
     {
       id: 'encoding-mix',
@@ -190,31 +194,34 @@ export const EVASION_LAYERS = {
       id: 'space-bypass',
       name: 'Space Bypass',
       icon: '⬜',
-      description: 'Replace spaces: ${IFS}, {cmd,arg}, <, %09',
+      description: 'Quote-aware ${IFS}, brace expansion, or decoded tab/space',
     },
     {
       id: 'keyword-bypass',
       name: 'Keyword Bypass',
       icon: '🚫',
-      description: "Break blocked words: c''at, c$@at, /e\"t\"c/",
+      description: "Break blocked words with empty quotes, backslashes, or cmd carets",
+      targets: ['linux', 'windows', 'powershell'],
     },
     {
       id: 'newline-bypass',
       name: 'Newline Injection',
       icon: '↩️',
-      description: 'Inject %0a or $\'\\n\' to bypass single-line checks',
+      description: 'Inject percent-encoded LF or CRLF at the command boundary',
     },
     {
       id: 'variable-expansion',
-      name: 'Variable Expansion',
+      name: 'Encoded Command',
       icon: '💲',
-      description: 'Use ${varname} tricks and brace expansion',
+      description: 'Reconstruct through Base64/sh or PowerShell EncodedCommand',
+      targets: ['linux', 'powershell'],
     },
     {
       id: 'hex-cmd',
       name: 'Hex Encoded Commands',
       icon: '🔢',
-      description: "Build commands via $(printf '\\xHH')",
+      description: 'Reconstruct UTF-8/UTF-16 commands through shell-native primitives',
+      targets: ['linux', 'powershell'],
     },
   ],
   lfi: [
@@ -247,6 +254,7 @@ export const EVASION_LAYERS = {
       name: 'PHP Wrapper Bypass',
       icon: '🔧',
       description: 'php://filter/convert.base64-encode/resource=...',
+      targets: ['php'],
     },
   ],
   ssrf: [
@@ -282,9 +290,9 @@ export const EVASION_LAYERS = {
     },
     {
       id: 'dns-redirect',
-      name: 'DNS / Redirect Bypass',
+      name: 'DNS / Metadata Variant',
       icon: '🌐',
-      description: 'Alternate hostnames: [::], 0.0.0.0, short DNS',
+      description: 'Loopback DNS aliases or provider metadata endpoints for cloud targets',
     },
   ],
   ssti: [
@@ -293,18 +301,21 @@ export const EVASION_LAYERS = {
       name: 'String Concatenation',
       icon: '➕',
       description: "Break keywords: self['__cla'+'ss__']",
+      targets: ['jinja2', 'twig'],
     },
     {
       id: 'hex-encoding',
       name: 'Hex Encoding',
       icon: '🔢',
       description: 'Hex escape: self[\'\\x5f\\x5fclass\\x5f\\x5f\']',
+      targets: ['jinja2', 'twig'],
     },
     {
       id: 'attr-access',
       name: 'Attribute Filter Bypass',
       icon: '🔍',
       description: 'Use |attr() filter: self|attr("__class__")',
+      targets: ['jinja2'],
     },
     {
       id: 'filter-bypass',
@@ -318,7 +329,7 @@ export const EVASION_LAYERS = {
       id: 'utf16',
       name: 'UTF-16 Encoding',
       icon: '🔤',
-      description: 'Re-encode entire XML as UTF-16 to blind WAF',
+      description: 'Generate downloadable XML with real UTF-16LE/BE bytes',
     },
     {
       id: 'utf7',
@@ -334,9 +345,9 @@ export const EVASION_LAYERS = {
     },
     {
       id: 'cdata-wrap',
-      name: 'CDATA Wrapping',
+      name: 'Alternative XML Vectors',
       icon: '📦',
-      description: 'Wrap sensitive content in CDATA sections',
+      description: 'Generate valid XInclude, SVG, and target-specific XML variants',
     },
   ],
 }

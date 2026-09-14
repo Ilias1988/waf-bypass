@@ -4,39 +4,39 @@ const BASE_URL = 'https://waf-bypass.dev'
 
 const SEO_DATA = {
   sqli: {
-    title: 'SQL Injection WAF Bypass Tool — SQLi Payload Obfuscator | WAF Bypass Toolkit',
-    description: 'Generate obfuscated SQL injection payloads to bypass WAFs like Cloudflare, AWS WAF & ModSecurity. Whitespace bypass, case toggling, inline comments, hex encoding & more.',
+    title: 'SQLi Payload Transformer for WAF Testing | WAF Bypass Toolkit',
+    description: 'Generate dialect-aware SQL injection variants with token-safe whitespace, comments, casing and encoding for authorized WAF testing.',
     keywords: 'SQL injection bypass, SQLi WAF bypass, SQL injection obfuscator, WAF evasion SQLi, Cloudflare SQL bypass, ModSecurity bypass, union select bypass, hex encoding SQL',
   },
   xss: {
-    title: 'XSS WAF Bypass Tool — Cross-Site Scripting Payload Obfuscator | WAF Bypass Toolkit',
-    description: 'Evade XSS WAF filters with HTML entity encoding, JS obfuscation, tag variation, case toggling and mixed encoding techniques. Generate bypass payloads for Burp Suite.',
+    title: 'XSS Payload Transformer for WAF Testing | WAF Bypass Toolkit',
+    description: 'Generate context-aware XSS variants for HTML, JavaScript and attribute contexts with explicit parsing and decoding requirements.',
     keywords: 'XSS bypass, XSS WAF evasion, cross-site scripting bypass, XSS filter bypass, HTML entity encoding, JS obfuscation, svg onload bypass, WAF XSS bypass',
   },
   cmdi: {
-    title: 'Command Injection WAF Bypass — OS CMDi Payload Obfuscator | WAF Bypass Toolkit',
-    description: 'Bypass command injection WAF rules with space bypass, keyword obfuscation, newline injection, variable expansion and hex-encoded commands for Linux & Windows.',
-    keywords: 'command injection bypass, OS command injection WAF, CMDi bypass, space bypass IFS, keyword bypass, command obfuscation, Linux command injection, Windows CMDi',
+    title: 'Command Injection Payload Transformer | WAF Bypass Toolkit',
+    description: 'Generate shell-aware command injection variants for Linux, Windows cmd.exe and PowerShell, including transport and runtime prerequisites.',
+    keywords: 'command injection bypass, OS command injection WAF, CMDi bypass, space bypass IFS, keyword bypass, Linux command injection, cmd.exe, PowerShell',
   },
   lfi: {
-    title: 'LFI & Path Traversal WAF Bypass — File Inclusion Obfuscator | WAF Bypass Toolkit',
-    description: 'Evade LFI and path traversal WAF detection with double URL encoding, Unicode overlong bytes, null byte injection, path normalization tricks and PHP wrappers.',
+    title: 'LFI & Path Traversal Payload Transformer | WAF Bypass Toolkit',
+    description: 'Generate target-aware LFI and path traversal variants with encoding depth, normalization, legacy and PHP-wrapper requirements clearly labeled.',
     keywords: 'LFI bypass, path traversal bypass, local file inclusion WAF, double URL encoding, null byte injection, PHP wrapper bypass, directory traversal evasion',
   },
   ssrf: {
-    title: 'SSRF WAF Bypass Tool — IP Obfuscation & URL Tricks | WAF Bypass Toolkit',
-    description: 'Obfuscate SSRF payloads with IP decimal/hex/octal notation, short forms, URL tricks, DNS rebinding and cloud metadata endpoint variations.',
-    keywords: 'SSRF bypass, SSRF WAF evasion, IP obfuscation, decimal IP, hex IP, localhost bypass, cloud metadata SSRF, DNS rebinding, URL obfuscation',
+    title: 'SSRF URL & IP Payload Transformer | WAF Bypass Toolkit',
+    description: 'Generate parser-aware SSRF variants using alternate IP notation, raw URL preservation and provider-specific metadata endpoints.',
+    keywords: 'SSRF bypass, SSRF WAF evasion, IP obfuscation, decimal IP, hex IP, localhost bypass, cloud metadata SSRF, DNS aliases, URL obfuscation',
   },
   ssti: {
-    title: 'SSTI WAF Bypass — Server-Side Template Injection Obfuscator | WAF Bypass Toolkit',
-    description: 'Bypass SSTI WAF rules for Jinja2, Twig & Freemarker with string concatenation, hex encoding, attr() filter bypass and indirect template access techniques.',
+    title: 'SSTI Payload Transformer for Template Engines | WAF Bypass Toolkit',
+    description: 'Generate target-aware SSTI variants for Jinja2, Twig and Freemarker while preserving template syntax and documenting prerequisites.',
     keywords: 'SSTI bypass, template injection bypass, Jinja2 bypass, Twig bypass, Freemarker bypass, SSTI WAF evasion, template injection obfuscation',
   },
   xxe: {
-    title: 'XXE WAF Bypass — XML External Entity Encoding Evasion | WAF Bypass Toolkit',
-    description: 'Evade XXE WAF detection by re-encoding XML payloads to UTF-16/UTF-7, using parameter entity nesting, CDATA wrapping, XInclude and SVG-based XXE techniques.',
-    keywords: 'XXE bypass, XML external entity bypass, XXE WAF evasion, UTF-16 XXE, UTF-7 XXE, parameter entity, CDATA XXE, XInclude attack',
+    title: 'XXE Payload & XML Encoding Transformer | WAF Bypass Toolkit',
+    description: 'Generate byte-correct UTF-16 XML downloads and parser-dependent UTF-7, entity, XInclude and SVG variants for authorized testing.',
+    keywords: 'XXE bypass, XML external entity testing, XXE WAF evasion, UTF-16 XXE, UTF-7 XXE, entity indirection, XInclude testing',
   },
 }
 
@@ -54,10 +54,10 @@ const FAQ_SCHEMA = {
     },
     {
       '@type': 'Question',
-      name: 'How do WAF bypass techniques work?',
+      name: 'How do WAF bypass tests work?',
       acceptedAnswer: {
         '@type': 'Answer',
-        text: 'WAF bypass techniques exploit gaps in how WAFs parse and analyze HTTP requests compared to how the backend application processes them. Common approaches include encoding payloads (URL encoding, hex, Unicode), altering whitespace and case, using alternative syntax (different HTML tags, SQL comment styles), and leveraging parser differentials between the WAF and the target application.',
+        text: 'Authorized tests compare how the WAF, transport decoder, framework, and backend parser interpret alternate representations of the same input.',
       },
     },
     {
@@ -65,7 +65,7 @@ const FAQ_SCHEMA = {
       name: 'What is SQL injection WAF bypass?',
       acceptedAnswer: {
         '@type': 'Answer',
-        text: 'SQL injection WAF bypass involves modifying SQLi payloads so they are not detected by WAF rules but are still executed by the database. Techniques include replacing spaces with comments (/**/), using alternative whitespace characters (%09, %0a), toggling case (uNiOn SeLeCt), MySQL versioned comments (/*!50000SELECT*/), hex-encoding strings (0x61646d696e), and double URL encoding.',
+        text: 'SQL injection WAF testing compares how a filtering layer and the selected database or request decoder interpret equivalent input. This toolkit creates dialect-aware variants and labels outputs that depend on an additional decoding or parser step.',
       },
     },
     {
@@ -78,22 +78,21 @@ const FAQ_SCHEMA = {
     },
     {
       '@type': 'Question',
-      name: 'Can this tool bypass Cloudflare WAF?',
+      name: 'Does this tool guarantee a WAF bypass?',
       acceptedAnswer: {
         '@type': 'Answer',
-        text: 'This tool generates multiple payload variants using real-world WAF evasion techniques that are commonly effective against various WAFs including Cloudflare. However, WAF bypass success depends on the specific ruleset configuration, and Cloudflare continuously updates its rules. The tool is designed to help security professionals test WAF configurations during authorized assessments.',
+        text: 'No. It generates deterministic candidate variants for authorized testing. Results depend on the target grammar, decoding chain, application context, WAF rules and backend behavior. Conditional and legacy labels identify important prerequisites.',
       },
     },
   ],
 }
 
-const BREADCRUMB_SCHEMA = {
+const WEBSITE_SCHEMA = {
   '@context': 'https://schema.org',
-  '@type': 'BreadcrumbList',
-  itemListElement: [
-    { '@type': 'ListItem', position: 1, name: 'Home', item: `${BASE_URL}/` },
-    { '@type': 'ListItem', position: 2, name: 'WAF Bypass Toolkit', item: `${BASE_URL}/` },
-  ],
+  '@type': 'WebSite',
+  name: 'WAF Bypass Toolkit',
+  alternateName: 'WAF Payload Transformer',
+  url: `${BASE_URL}/`,
 }
 
 export default function SEOHead({ category = 'sqli' }) {
@@ -104,13 +103,21 @@ export default function SEOHead({ category = 'sqli' }) {
     '@type': 'WebApplication',
     name: 'WAF Bypass Toolkit',
     url: `${BASE_URL}/`,
-    description: 'Swiss Army Knife for WAF bypass — generate obfuscated web payloads for pentesting and bug bounty hunting.',
+    description: 'Target-aware payload transformation toolkit for authorized web security testing.',
     applicationCategory: 'SecurityApplication',
     operatingSystem: 'Web Browser',
     inLanguage: 'en',
     browserRequirements: 'Requires JavaScript',
     datePublished: '2026-04-03',
-    dateModified: '2026-04-03',
+    dateModified: '2026-09-14',
+    softwareVersion: '1.1.0',
+    isAccessibleForFree: true,
+    featureList: [
+      'SQLi, XSS, CMDi, LFI, SSRF, SSTI and XXE transformation engines',
+      'Target-aware and context-aware output',
+      'Validated, conditional and legacy output labels',
+      'Exact UTF-16 XML byte downloads',
+    ],
     author: {
       '@type': 'Person',
       name: 'Ilias Georgopoulos',
@@ -147,7 +154,7 @@ export default function SEOHead({ category = 'sqli' }) {
 
       <script type="application/ld+json">{JSON.stringify(webAppSchema)}</script>
       <script type="application/ld+json">{JSON.stringify(FAQ_SCHEMA)}</script>
-      <script type="application/ld+json">{JSON.stringify(BREADCRUMB_SCHEMA)}</script>
+      <script type="application/ld+json">{JSON.stringify(WEBSITE_SCHEMA)}</script>
     </Helmet>
   )
 }

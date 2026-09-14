@@ -1,115 +1,192 @@
-/**
- * Encoding Utilities for WAF Bypass Toolkit
- * Core encoding/decoding functions used across all engines.
- */
+/** Encoding utilities shared by every payload engine. */
 
-/** URL-encode a single character */
-export function urlEncodeChar(c) {
-  return '%' + c.charCodeAt(0).toString(16).padStart(2, '0').toUpperCase()
+const textEncoder = new TextEncoder()
+
+function utf8Bytes(value) {
+  return textEncoder.encode(String(value))
+}
+function bytesToBase64(bytes) {
+  let binary = ''
+  const chunkSize = 0x8000
+  for (let offset = 0; offset < bytes.length; offset += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(offset, offset + chunkSize))
+  }
+  return btoa(binary)
 }
 
-/** URL-encode an entire string */
-export function urlEncode(str) {
-  return Array.from(str).map(urlEncodeChar).join('')
-}
-
-/** Double URL-encode a string */
-export function doubleUrlEncode(str) {
-  return urlEncode(urlEncode(str))
-}
-
-/** HTML hex entity encode: &#xHH; */
-export function htmlHexEncode(str) {
-  return Array.from(str)
-    .map((c) => '&#x' + c.charCodeAt(0).toString(16).toUpperCase() + ';')
+/** URL-encode one Unicode character as UTF-8 bytes. */
+export function urlEncodeChar(char) {
+  return Array.from(utf8Bytes(char))
+    .map((byte) => `%${byte.toString(16).padStart(2, '0').toUpperCase()}`)
     .join('')
 }
 
-/** HTML decimal entity encode: &#DDD; */
-export function htmlDecimalEncode(str) {
-  return Array.from(str)
-    .map((c) => '&#' + c.charCodeAt(0) + ';')
+/** URL-encode an entire string, including normally unreserved characters. */
+export function urlEncode(value) {
+  return Array.from(String(value)).map(urlEncodeChar).join('')
+}
+
+export function doubleUrlEncode(value) {
+  return urlEncode(urlEncode(value))
+}
+
+export function htmlHexEncode(value) {
+  return Array.from(String(value))
+    .map((char) => `&#x${char.codePointAt(0).toString(16).toUpperCase()};`)
     .join('')
 }
 
-/** Hex string encoding for SQL: 0x... */
-export function toSqlHex(str) {
-  return '0x' + Array.from(str)
-    .map((c) => c.charCodeAt(0).toString(16).padStart(2, '0'))
+export function htmlDecimalEncode(value) {
+  return Array.from(String(value))
+    .map((char) => `&#${char.codePointAt(0)};`)
     .join('')
 }
 
-/** Random case toggle per character */
-export function randomCase(str) {
-  return Array.from(str)
-    .map((c) => (Math.random() > 0.5 ? c.toUpperCase() : c.toLowerCase()))
-    .join('')
+/** SQL hex representation of the UTF-8 bytes used by the web request. */
+export function toSqlHex(value) {
+  return `0x${Array.from(utf8Bytes(value))
+    .map((byte) => byte.toString(16).padStart(2, '0'))
+    .join('')}`
 }
 
-/** Convert IP string to decimal number */
+/** Stable alternating case; offset creates reproducible variants. */
+export function alternatingCase(value, offset = 0) {
+  let letterIndex = 0
+  return Array.from(String(value)).map((char) => {
+    if (!/[a-z]/i.test(char)) return char
+    const upper = (letterIndex++ + offset) % 2 === 0
+    return upper ? char.toUpperCase() : char.toLowerCase()
+  }).join('')
+}
+
+/** Backwards-compatible deterministic case transform. */
+export function randomCase(value) {
+  return alternatingCase(value)
+}
+
+function parseIpv4(ip) {
+  const parts = String(ip).split('.')
+  if (parts.length !== 4 || parts.some((part) => !/^\d{1,3}$/.test(part))) {
+    throw new TypeError(`Invalid IPv4 address: ${ip}`)
+  }
+  const numbers = parts.map(Number)
+  if (numbers.some((part) => part < 0 || part > 255)) {
+    throw new TypeError(`Invalid IPv4 address: ${ip}`)
+  }
+  return numbers
+}
+
 export function ipToDecimal(ip) {
-  const parts = ip.split('.').map(Number)
-  return ((parts[0] << 24) + (parts[1] << 16) + (parts[2] << 8) + parts[3]) >>> 0
+  const [a, b, c, d] = parseIpv4(ip)
+  return (((a * 256 + b) * 256 + c) * 256 + d) >>> 0
 }
 
-/** Convert IP string to hex */
 export function ipToHex(ip) {
-  return '0x' + ipToDecimal(ip).toString(16).padStart(8, '0')
+  return `0x${ipToDecimal(ip).toString(16).padStart(8, '0')}`
 }
 
-/** Convert IP string to octal parts */
 export function ipToOctal(ip) {
-  return ip.split('.').map((p) => '0' + Number(p).toString(8).padStart(3, '0')).join('.')
+  return parseIpv4(ip)
+    .map((part) => `0${part.toString(8).padStart(3, '0')}`)
+    .join('.')
 }
 
-/** UTF-7 encode a string (simplified) */
-export function toUtf7(str) {
-  let result = ''
-  let inBase64 = false
-  let buffer = ''
+export function utf8ToBase64(value) {
+  return bytesToBase64(utf8Bytes(value))
+}
 
-  for (const char of str) {
-    const code = char.charCodeAt(0)
-    if (code >= 0x20 && code <= 0x7e && char !== '+') {
-      if (inBase64) {
-        result += '+' + btoa(buffer) .replace(/=+$/, '') + '-'
-        buffer = ''
-        inBase64 = false
-      }
+export function utf8ToHex(value) {
+  return Array.from(utf8Bytes(value))
+    .map((byte) => byte.toString(16).padStart(2, '0'))
+    .join('')
+}
+
+export function utf8ToHexEscapes(value) {
+  return Array.from(utf8Bytes(value))
+    .map((byte) => `\\x${byte.toString(16).padStart(2, '0')}`)
+    .join('')
+}
+
+function utf16Bytes(value, littleEndian, includeBom = true) {
+  const input = String(value)
+  const bytes = []
+  if (includeBom) bytes.push(...(littleEndian ? [0xff, 0xfe] : [0xfe, 0xff]))
+  for (let index = 0; index < input.length; index += 1) {
+    const codeUnit = input.charCodeAt(index)
+    const high = (codeUnit >> 8) & 0xff
+    const low = codeUnit & 0xff
+    bytes.push(...(littleEndian ? [low, high] : [high, low]))
+  }
+  return Uint8Array.from(bytes)
+}
+
+export function utf16LeToBase64(value, includeBom = true) {
+  return bytesToBase64(utf16Bytes(value, true, includeBom))
+}
+
+export function utf16BeToBase64(value, includeBom = true) {
+  return bytesToBase64(utf16Bytes(value, false, includeBom))
+}
+
+/** Encode a string as one UTF-7 shifted sequence. */
+export function utf7Shift(value) {
+  const encoded = bytesToBase64(utf16Bytes(value, false, false)).replace(/=+$/, '')
+  return `+${encoded}-`
+}
+
+/** RFC 2152-style UTF-7 encoding for non-direct characters. */
+export function toUtf7(value) {
+  let result = ''
+  let buffered = ''
+
+  const flush = () => {
+    if (!buffered) return
+    result += utf7Shift(buffered)
+    buffered = ''
+  }
+
+  for (const char of String(value)) {
+    const codePoint = char.codePointAt(0)
+    const direct = codePoint >= 0x20 && codePoint <= 0x7e && char !== '+'
+    if (direct) {
+      flush()
       result += char
+    } else if (char === '+') {
+      flush()
+      result += '+-'
     } else {
-      if (!inBase64) inBase64 = true
-      // Store as UTF-16BE bytes
-      buffer += String.fromCharCode((code >> 8) & 0xff, code & 0xff)
+      buffered += char
     }
   }
-  if (inBase64) {
-    result += '+' + btoa(buffer).replace(/=+$/, '') + '-'
+  flush()
+  return result
+}
+
+export function toUtf16Hex(value) {
+  let result = ''
+  const input = String(value)
+  for (let index = 0; index < input.length; index += 1) {
+    const codeUnit = input.charCodeAt(index)
+    result += `\\x${((codeUnit >> 8) & 0xff).toString(16).padStart(2, '0')}`
+    result += `\\x${(codeUnit & 0xff).toString(16).padStart(2, '0')}`
   }
   return result
 }
 
-/** Simulate UTF-16 hex representation of XML content */
-export function toUtf16Hex(str) {
-  return Array.from(str)
-    .map((c) => {
-      const code = c.charCodeAt(0)
-      return '\\x' + ((code >> 8) & 0xff).toString(16).padStart(2, '0') +
-        '\\x' + (code & 0xff).toString(16).padStart(2, '0')
-    })
-    .join('')
+export function hexEscape(value) {
+  return Array.from(String(value)).map((char) => {
+    const codePoint = char.codePointAt(0)
+    return codePoint <= 0xff
+      ? `\\x${codePoint.toString(16).padStart(2, '0')}`
+      : `\\u{${codePoint.toString(16)}}`
+  }).join('')
 }
 
-/** Hex escape for template strings: \x5f */
-export function hexEscape(str) {
-  return Array.from(str)
-    .map((c) => '\\x' + c.charCodeAt(0).toString(16).padStart(2, '0'))
-    .join('')
-}
-
-/** Unicode escape for JS: \u0041 */
-export function jsUnicodeEscape(str) {
-  return Array.from(str)
-    .map((c) => '\\u' + c.charCodeAt(0).toString(16).padStart(4, '0'))
-    .join('')
+export function jsUnicodeEscape(value) {
+  return Array.from(String(value)).map((char) => {
+    const codePoint = char.codePointAt(0)
+    return codePoint <= 0xffff
+      ? `\\u${codePoint.toString(16).padStart(4, '0')}`
+      : `\\u{${codePoint.toString(16)}}`
+  }).join('')
 }
